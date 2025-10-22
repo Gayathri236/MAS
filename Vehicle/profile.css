@@ -1,0 +1,77 @@
+/* General body styling */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+/* Container styling */
+.container {
+    width: 400px;
+    margin: 50px auto;
+    padding: 25px;
+    background-color: #ffffff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 10px;
+}
+
+/* Form headings */
+.container h2 {
+    text-align: center;
+    color: #00695c;
+    margin-bottom: 25px;
+}
+
+/* Form labels */
+form label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Form inputs */
+form input[type="text"],
+form input[type="file"],
+form select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+/* Submit button */
+form button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 20px;
+    background-color: #00695c;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #004d40;
+}
+
+/* Success/Error messages */
+p {
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media screen and (max-width: 480px) {
+    .container {
+        width: 90%;
+        padding: 20px;
+    }
+}

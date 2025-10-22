@@ -1,0 +1,120 @@
+body{
+   font-family: Arial, sans-serif; 
+   background: #f0f2f5; 
+   margin:0; 
+   padding:0; }
+  
+/* 🌿 Navigation Bar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #3e8e41;
+  color: white;
+  padding: 15px 30px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-left h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.nav-right a {
+  color: white;
+  text-decoration: none;
+  margin: 0 12px;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.nav-right a:hover {
+  color: #d9ffd8;
+}
+
+.logout-btn {
+  background-color: #ff4d4d;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.logout-btn:hover {
+  background-color: #e60000;
+}
+   
+.container {
+     max-width: 1200px; 
+     margin:20px auto; 
+     padding:10px; }
+
+h1 { 
+    text-align:center; 
+    color:#333; }
+
+.order-card { 
+    background: white; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+    margin: 15px 0; padding: 20px; display: flex; 
+    gap: 20px; 
+    align-items: center; }
+
+.order-card img {
+     width: 120px; 
+     height: 120px; 
+     object-fit: cover; 
+     border-radius: 8px; }
+
+.order-details { 
+    flex: 1; }
+    
+.order-details h3 {
+     margin: 0 0 8px 0; }
+
+.order-details p { 
+    margin: 4px 0; }
+
+.status { 
+    font-weight: bold; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    display: inline-block; }
+
+.status.Pending { 
+    background: #fdd835; 
+    color: #fff; }
+
+.status.Completed { 
+    background: #43a047; 
+    color: #fff; }
+
+.status.Cancelled { 
+    background: #e53935; 
+    color: #fff; }
+
+.actions button {
+     margin-right: 10px; 
+     padding: 8px 12px; 
+     border: none; 
+     border-radius: 6px; 
+     cursor: pointer; 
+     color: white; }
+
+.actions .complete { 
+    background: #43a047; }
+
+.actions .contact { 
+    background: #1e88e5; }
+
+@media(max-width:768px){
+     .order-card {
+         flex-direction: column; 
+         text-align: center; } 
+
+    .order-card img { 
+        margin-bottom: 10px; } }

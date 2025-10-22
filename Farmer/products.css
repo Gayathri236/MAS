@@ -1,0 +1,185 @@
+/* Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: #f4f6f9;
+    color: #333;
+    padding: 20px;
+}
+
+/* Container */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+/* 🌿 Navigation Bar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #3e8e41;
+  color: white;
+  padding: 15px 30px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-left h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.nav-right a {
+  color: white;
+  text-decoration: none;
+  margin: 0 12px;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.nav-right a:hover {
+  color: #d9ffd8;
+}
+
+.logout-btn {
+  background-color: #ff4d4d;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.logout-btn:hover {
+  background-color: #e60000;
+}
+
+/* Headings */
+h1, h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+/* Form Box */
+form {
+    background: #f0f4f8;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+form input, form select, form button {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 8px 0;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 15px;
+}
+
+form button {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+form button:hover {
+    background: #218838;
+}
+
+/* Table Styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+table th, table td {
+    padding: 12px 15px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+table th {
+    background: #007bff;
+    color: #fff;
+    font-size: 16px;
+}
+
+table tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+table img {
+    border-radius: 6px;
+}
+
+/* Buttons inside table */
+a {
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    margin: 2px;
+    display: inline-block;
+    transition: 0.3s;
+}
+
+a:hover {
+    opacity: 0.9;
+}
+
+a.edit-btn {
+    background: #ffc107;
+    color: #000;
+}
+
+a.delete-btn {
+    background: #dc3545;
+    color: #fff;
+}
+
+/* Status Labels */
+.status {
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    color: #fff;
+    display: inline-block;
+}
+
+.status-Available {
+    background: #28a745; /* green */
+}
+
+.status-Sold {
+    background: #dc3545; /* red */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    table, form input, form select, form button {
+        font-size: 14px;
+    }
+
+    table th, table td {
+        padding: 10px;
+    }
+}

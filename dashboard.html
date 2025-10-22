@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Dashboard Page</title>
+    <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    body {
+      display: flex;
+      height: 100vh;
+      background: #f4f6f9;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar h2 {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .sidebar a {
+      color: white;
+      text-decoration: none;
+      padding: 12px 15px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .sidebar a:hover {
+      background: #34495e;
+    }
+
+    /* Main */
+    .main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .searchbar input {
+      padding: 8px 12px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+    }
+
+    /* Dashboard cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-bottom: 15px;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    ul li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+    <div class="sidebar">
+        <a href="#">Home</a>
+        <a href="#">Product Entry</a>
+        <a href="#">Orders</a>
+        <a href="#">Product Trading</a>
+        <a href="#">Login</a>
+    </div>
+    
+  <div class="main">
+        <!-- Top bar -->
+        <div class="topbar">
+        <h2>Dashboard</h2>
+        <div class="searchbar">
+            <input type="text" placeholder="Search here...">
+        </div>
+  </div>
+
+  <!-- Dashboard cards -->
+    <div class="cards">
+      <!-- Advertisement Video -->
+      <div class="card">
+        <h3>Advertisement</h3>
+        <video autoplay loop muted>
+          <source src="your_ad_video.mp4" type="video/mp4">
+          Your browser does not support video.
+        </video>
+      </div>
+
+      <!-- Best Sellers/Buyers -->
+      <div class="card">
+        <h3>Best Sellers / Buyers</h3>
+        <ul id="bestList">
+          <li>Loading...</li>
+        </ul>
+      </div>
+
+      <!-- Vehicle Traffic Chart -->
+      <div class="card">
+        <h3>Vehicle Traffic</h3>
+        <canvas id="trafficChart"></canvas>
+      </div>
+
+      <!-- Price Chart -->
+      <div class="card">
+        <h3>Price Trends</h3>
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Auto update Best Sellers/Buyers
+    const bestList = document.getElementById("bestList");
+    const data = [
+      ["Mango Supplier", "Buyer A"],
+      ["Apple Supplier", "Buyer B"],
+      ["Milk Supplier", "Buyer C"],
+      ["Bread Supplier", "Buyer D"],
+    ];
+    let index = 0;
+    function updateList() {
+      bestList.innerHTML = `
+        <li>Seller: ${data[index][0]}</li>
+        <li>Buyer: ${data[index][1]}</li>
+      `;
+      index = (index + 1) % data.length;
+    }
+    setInterval(updateList, 3000); // update every 3s
+    updateList();
+
+    // Vehicle Traffic Chart
+    const ctx1 = document.getElementById("trafficChart").getContext("2d");
+    new Chart(ctx1, {
+      type: "line",
+      data: {
+        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        datasets: [{
+          label: "Vehicles",
+          data: [120, 190, 300, 250, 200, 170, 230],
+          borderColor: "blue",
+          backgroundColor: "rgba(0,0,255,0.1)",
+          tension: 0.3
+        }]
+      }
+    });
+
+    // Price Chart
+    const ctx2 = document.getElementById("priceChart").getContext("2d");
+    new Chart(ctx2, {
+      type: "bar",
+      data: {
+        labels: ["Rice", "Wheat", "Milk", "Bread", "Eggs"],
+        datasets: [{
+          label: "Price ($)",
+          data: [25, 18, 12, 10, 8],
+          backgroundColor: ["#3498db", "#e67e22", "#2ecc71", "#9b59b6", "#f1c40f"]
+        }]
+      }
+    });
+  </script>
+</body>
+</html>
