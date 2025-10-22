@@ -144,14 +144,8 @@ h1 { text-align:center; color:#2c3e50; margin-bottom:20px; }
         <option value="Grains" <?= $categoryFilter=='Grains'?'selected':'' ?>>Grains</option>
         <option value="Other" <?= $categoryFilter=='Other'?'selected':'' ?>>Other</option>
     </select>
-    <input type="number" name="min_price" placeholder="Min Price" value="<?= htmlspecialchars($minPrice) ?>">
+    <input type="number" name="min_price" placeholder="Min Price..." value="<?= htmlspecialchars($minPrice) ?>">
     <input type="number" name="max_price" placeholder="Max Price" value="<?= htmlspecialchars($maxPrice) ?>">
-    <select name="quality">
-        <option value="">All Quality</option>
-        <option value="A" <?= $qualityFilter=='A'?'selected':'' ?>>A</option>
-        <option value="B" <?= $qualityFilter=='B'?'selected':'' ?>>B</option>
-        <option value="C" <?= $qualityFilter=='C'?'selected':'' ?>>C</option>
-    </select>
     <button type="submit">Filter</button>
 </form>
 
@@ -159,8 +153,16 @@ h1 { text-align:center; color:#2c3e50; margin-bottom:20px; }
 <div class="products-grid">
 <?php if(count($products) > 0): ?>
     <?php foreach($products as $product): 
-        $farmer = $usersCollection->findOne(['username'=>$product['farmer']]) ?? [];
-    ?>
+    // Try to find farmer by username OR name
+    $farmer = $usersCollection->findOne([
+        '$or' => [
+            ['username' => $product['farmer']],
+            ['name' => $product['farmer']]
+        ],
+        'role' => 'farmer'
+    ]) ?? [];
+?>
+
     <div class="card">
         <img src="../uploads/products/<?= htmlspecialchars($product['image'] ?? 'default.jpg') ?>" alt="Product Image">
         <div class="card-body">
@@ -168,7 +170,6 @@ h1 { text-align:center; color:#2c3e50; margin-bottom:20px; }
             <p><strong>Farmer:</strong> <?= htmlspecialchars($farmer['name'] ?? $product['farmer']) ?> | Rating: <?= htmlspecialchars($farmer['rating'] ?? '-') ?></p>
             <p><strong>Price:</strong> <?= htmlspecialchars($product['price'] ?? '-') ?> LKR / <?= htmlspecialchars($product['unit'] ?? '-') ?></p>
             <p><strong>Available:</strong> <?= htmlspecialchars($product['quantity'] ?? '-') ?> <?= htmlspecialchars($product['unit'] ?? '-') ?></p>
-            <p><strong>Quality:</strong> <?= htmlspecialchars($product['quality_grade'] ?? '-') ?></p>
             <!-- In the products grid section of products_marketplace.php -->
 <div class="actions">
     <a href="product_details.php?id=<?= $product['_id'] ?>" class="view">View Details</a>

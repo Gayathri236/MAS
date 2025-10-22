@@ -341,7 +341,6 @@ td.expired {
                 <th>Name</th>
                 <th>Quantity</th>
                 <th>Price</th>
-                <th>Quality Grade</th>
                 <th>Status</th>
                 <th>Views</th>
                 <th>Orders</th>
@@ -354,7 +353,6 @@ td.expired {
                 $status = $product['status'] ?? 'Active';
                 $quantityUnit = $product['unit'] ?? '';
                 $price = $product['price'] ?? 0;
-                $quality = $product['quality_grade'] ?? 'N/A';
                 $views = $product['views'] ?? 0;
                 $orders = $product['orders'] ?? 0;
             ?>
@@ -363,7 +361,6 @@ td.expired {
                     <td><?= htmlspecialchars($product['name'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($product['quantity'] ?? '-') ?> <?= $quantityUnit ?></td>
                     <td><?= htmlspecialchars($price) ?> LKR</td>
-                    <td><?= htmlspecialchars($quality) ?></td>
                     <td class="<?= strtolower(str_replace(' ', '', $status)) ?>"><?= htmlspecialchars($status) ?></td>
                     <td><?= $views ?></td>
                     <td><?= $orders ?></td>
