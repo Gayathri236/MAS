@@ -69,8 +69,8 @@ $workers = $workersCollection->find([], ['sort' => ['registered_date' => -1]]);
   <div class="nav-right">
     <a href="admin_dashboard.php">🏠 Dashboard</a>
     <a href="user_management.php">👥 Manage Users</a>
-    <a href="order_management.php">📦  Manage Orders</a>
-    <a href="time_slot_management.php">🚚 Time Slot</a>
+    <a href="order_management.php">📦  View Orders</a>
+    <a href="admin_report.php">📄 Report</a>
     <a href="worker_registration.php"class="active">📝 Worker Registration</a>
     <a href="../logout.php" class="logout">🚪 Logout</a>
   </div>

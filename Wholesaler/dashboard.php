@@ -1,164 +1,129 @@
 <?php
-session_start();
-require __DIR__ . '/../mongodb_config.php';
+    session_start();
+    require __DIR__ . '/../mongodb_config.php';
+    date_default_timezone_set('Asia/Colombo');
 
-// Only wholesalers can access
-if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'wholesaler') {
-    header("Location: ../login.php");
-    exit();
-}
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Cache-Control: post-check=0, pre-check=0", false);
+    header("Pragma: no-cache");
 
-$wholesaler = $_SESSION['username'];
-$ordersCollection = $db->orders;
-$productsCollection = $db->products;
 
-// Get statistics
-$total_orders = $ordersCollection->countDocuments(['wholesaler' => $wholesaler]);
-$pending_orders = $ordersCollection->countDocuments(['wholesaler' => $wholesaler, 'status' => 'pending']);
-$completed_orders = $ordersCollection->countDocuments(['wholesaler' => $wholesaler, 'status' => 'completed']);
-$monthly_spending = $ordersCollection->aggregate([
-    ['$match' => ['wholesaler' => $wholesaler, 'status' => 'completed']],
-    ['$group' => ['_id' => null, 'total' => ['$sum' => '$total_amount']]]
-])->toArray();
-$monthly_spending = $monthly_spending ? $monthly_spending[0]['total'] : 0;
+    if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'wholesaler') {
+        header("Location: ../login.php");
+        exit();
+    }
 
-// Get recent orders
-$recent_orders = $ordersCollection->find(
-    ['wholesaler' => $wholesaler],
-    ['sort' => ['order_date' => -1], 'limit' => 5]
-)->toArray();
+        $wholesaler = $_SESSION['username'];
+        $ordersCollection = $db->orders;
 
+        // --- Status counts ---
+        $statusCursor = $ordersCollection->aggregate([
+            ['$match' => ['wholesaler' => $wholesaler]],
+            ['$group' => ['_id' => ['$ifNull' => ['$status', 'unknown']], 'count' => ['$sum' => 1]]]
+        ])->toArray();
+        $statusCounts = [];
+        foreach ($statusCursor as $r) $statusCounts[$r['_id']] = (int)$r['count'];
+        $statuses = ['pending','accepted','delivery','completed','rejected'];
+        foreach ($statuses as $s) if (!isset($statusCounts[$s])) $statusCounts[$s]=0;
+        $total_orders = array_sum($statusCounts);
+
+        // --- Last 6 months ---
+        $months = [];
+        $dt = new DateTime('first day of this month');
+        for ($i=5;$i>=0;$i--){
+            $m = (clone $dt)->modify("-$i months");
+            $months[] = $m->format('Y-m');
+        }
+
+        // Orders per month
+        $ordersPerMonthCursor = $ordersCollection->aggregate([
+            ['$match'=>['wholesaler'=>$wholesaler,'order_date'=>['$exists'=>true]]],
+            ['$group'=>['_id'=>['$dateToString'=>['format'=>'%Y-%m','date'=>'$order_date','timezone'=>'Asia/Colombo']], 'count'=>['$sum'=>1]]],
+            ['$sort'=>['_id'=>1]]
+        ])->toArray();
+        $ordersPerMonth = array_fill_keys($months,0);
+        foreach($ordersPerMonthCursor as $r) if(isset($ordersPerMonth[$r['_id']])) $ordersPerMonth[$r['_id']]=$r['count'];
+
+        // Spending per month
+        $spendPerMonthCursor = $ordersCollection->aggregate([
+            ['$match'=>['wholesaler'=>$wholesaler,'status'=>'completed']],
+            ['$group'=>['_id'=>['$dateToString'=>['format'=>'%Y-%m','date'=>'$order_date','timezone'=>'Asia/Colombo']],'total'=>['$sum'=>['$ifNull'=>['$total_amount',0]]]]],
+            ['$sort'=>['_id'=>1]]
+        ])->toArray();
+        $spendPerMonth = array_fill_keys($months,0);
+        foreach($spendPerMonthCursor as $r) if(isset($spendPerMonth[$r['_id']])) $spendPerMonth[$r['_id']] = $r['total'];
+        $monthly_spending_total = array_sum($spendPerMonth);
+
+        // Top products
+        $topProductsCursor = $ordersCollection->aggregate([
+            ['$match'=>['wholesaler'=>$wholesaler,'product_name'=>['$exists'=>true]]],
+            ['$group'=>['_id'=>'$product_name','qty'=>['$sum'=>['$ifNull'=>['$quantity',0]]]]],
+            ['$sort'=>['qty'=>-1]], ['$limit'=>5]
+        ])->toArray();
+        $topProducts = [];
+        foreach($topProductsCursor as $r) $topProducts[] = ['name'=>$r['_id'],'qty'=>$r['qty']];
+
+        // --- JS Data for charts ---
+        $pieData = json_encode([['Status','Count'],['Pending',$statusCounts['pending']],['Accepted',$statusCounts['accepted']],['In Delivery',$statusCounts['delivery']],['Completed',$statusCounts['completed']],['Rejected',$statusCounts['rejected']]]);
+        $lineData = [['Month','Orders']];
+        foreach($ordersPerMonth as $k=>$v){$dt=DateTime::createFromFormat('Y-m',$k); $lineData[]=[$dt->format('M Y'),$v];}
+        $lineJson=json_encode($lineData);
+        $spendData = [['Month','Spent']]; foreach($spendPerMonth as $k=>$v){$dt=DateTime::createFromFormat('Y-m',$k); $spendData[]=[$dt->format('M Y'),$v];}
+        $spendJson = json_encode($spendData);
+        $topProdData=[['Product','Qty']]; foreach($topProducts as $p) $topProdData[]=[$p['name'],$p['qty']];
+        $topProdJson=json_encode($topProdData);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wholesaler Dashboard</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; color: #333; }
-        /* ----- Navigation Bar ----- */
-.navbar {
-  background: #1e3d59;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 40px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.navbar .nav-left h2 {
-  margin: 0;
-  font-size: 22px;
-}
-
-.navbar .nav-right a {
-  color: white;
-  margin-left: 20px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: 0.3s;
-  padding: 6px 10px;
-  border-radius: 6px;
-}
-
-.navbar .nav-right a:hover {
-  background: #3b7ea1;
-}
-
-.navbar .nav-right a.active {
-  background: #2ecc71;
-  color: white;
-}
-
-.navbar .nav-right a.logout {
-  background: #e74c3c;
-}
-
-
-        .container { width: 95%; max-width: 1200px; margin: 20px auto; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
-        .stat-number { font-size: 2rem; font-weight: bold; color: #2c3e50; margin: 10px 0; }
-        .stat-label { color: #7f8c8d; font-size: 14px; }
-        
-        .quick-actions { display: flex; gap: 15px; margin-bottom: 30px; justify-content: center; }
-        .action-btn { padding: 12px 24px; background: #3498db; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.3s; }
-        .action-btn:hover { background: #2980b9; }
-        .action-btn.green { background: #27ae60; }
-        .action-btn.green:hover { background: #219150; }
-        
-        .recent-orders { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .order-item { padding: 15px; border-bottom: 1px solid #ecf0f1; display: flex; justify-content: space-between; align-items: center; }
-        .order-item:last-child { border-bottom: none; }
-        .status { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .status.pending { background: #fff3cd; color: #856404; }
-        .status.accepted { background: #d1ecf1; color: #0c5460; }
-        .status.completed { background: #d4edda; color: #155724; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wholesaler Dashboard — DMAS</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="assets/dashboard.css">
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 </head>
 <body>
-     <nav class="navbar">
-        <div>🌾 DMAS - Wholesaler Portal</div>
-       <div class="nav-right">
-      <a href="dashboard.php">🏠 Dashboard</a>
-      <a href="product_marketplace.php">🛒 Marketplace</a>
-      <a href="order_management.php">📦 Orders</a>
-      <a href="place_order.php">📝 Place Orders</a>
-      <a href="profile.php" class="active">👤 My Profile</a>
-      <a href="../logout.php" class="logout">🚪 Logout</a>
-    </div>
+
+    <nav class="navbar">
+        <div class="brand">🌾 DMAS - Wholesaler</div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </div>
+        <div class="menu" id="menu">
+            <a href="dashboard.php" class="active">🏠 Dashboard</a>
+            <a href="product_marketplace.php">🛒 Marketplace</a>
+            <a href="order_management.php">📦 Orders</a>
+            <a href="prediction copy.php">📈 Price Prediction</a>
+            <a href="view_workers.php">👨‍🔧 View Workers</a>
+            <a href="profile.php">👤 My Profile</a>
+            <a href="../logout.php" class="logout" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
+        </div>
     </nav>
 
-    <div class="container">
-        <h1>Welcome, <?= htmlspecialchars($_SESSION['name'] ?? $wholesaler) ?></h1>
-        
-        <!-- Quick Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number"><?= $total_orders ?></div>
-                <div class="stat-label">Total Orders</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number"><?= $pending_orders ?></div>
-                <div class="stat-label">Pending Orders</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number"><?= $completed_orders ?></div>
-                <div class="stat-label">Completed Orders</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">LKR <?= number_format($monthly_spending, 2) ?></div>
-                <div class="stat-label">Monthly Spending</div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <a href="order_management.php" class="action-btn">View Orders</a>
-            <a href="" class="action-btn">Price Trends</a>
-        </div>
-
-        <!-- Recent Orders -->
-        <div class="recent-orders">
-            <h2>Recent Orders</h2>
-            <?php if(count($recent_orders) > 0): ?>
-                <?php foreach($recent_orders as $order): ?>
-                    <div class="order-item">
-                        <div>
-                            <strong>Order #<?= $order['_id'] ?></strong>
-                            <div>Products: <?= count($order['items'] ?? []) ?> items</div>
-                            <div>Total: LKR <?= number_format($order['total_amount'] ?? 0, 2) ?></div>
-                        </div>
-                        <div class="status <?= $order['status'] ?>"><?= ucfirst($order['status']) ?></div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p style="text-align: center; color: #7f8c8d;">No orders yet. <a href="products_marketplace.php">Start shopping!</a></p>
-            <?php endif; ?>
-        </div>
+    <div id="chartsData"
+        data-pie='<?= $pieData ?>'
+        data-line='<?= $lineJson ?>'
+        data-spend='<?= $spendJson ?>'
+        data-topprod='<?= $topProdJson ?>'>
     </div>
+
+    <div class="top-cards">
+        <div class="card card1"><i class="fa-solid fa-list-check"></i><span><?= $total_orders ?></span><p>Total Orders</p></div>
+        <div class="card card2"><i class="fa-solid fa-hourglass-half"></i><span><?= $statusCounts['pending'] ?></span><p>Pending</p></div>
+        <div class="card card3"><i class="fa-solid fa-check"></i><span><?= $statusCounts['accepted'] ?></span><p>Accepted</p></div>
+        <div class="card card4"><i class="fa-solid fa-money-bill"></i><span>₨ <?= number_format($monthly_spending_total,2) ?></span><p>Spent (6 months)</p></div>
+    </div>
+
+    <div class="charts">
+        <div class="chart-container"><h4>Order Status Distribution</h4><div class="chart-box" id="piechart"></div></div>
+        <div class="chart-container"><h4>Orders Trend (Last 6 Months)</h4><div class="chart-box" id="linechart"></div></div>
+        <div class="chart-container"><h4>Monthly Spending</h4><div class="chart-box" id="spendchart"></div></div>
+        <div class="chart-container"><h4>Top Products</h4><div class="chart-box" id="topprod"></div></div>
+    </div>
+
+    <script src="assets/dashboard.js"></script>
 </body>
 </html>

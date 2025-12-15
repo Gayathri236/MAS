@@ -1,0 +1,252 @@
+
+body { 
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f7f9;
+    margin: 0;
+    color: #333;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1e3d59;
+    color: white;
+    padding: 15px 30px;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+.navbar .brand {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.navbar .menu {
+    display: flex;
+    gap: 15px;
+}
+
+.navbar .menu a {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.navbar .menu a:hover {
+    background: #3a5a80;
+}
+
+.navbar .menu a.active {
+    background: #2ecc71;
+}
+
+.navbar .menu a.logout {
+    background: #e74c3c;
+}
+
+.navbar .hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.navbar .hamburger span {
+    height: 3px;
+    width: 25px;
+    background: white;
+    margin: 4px 0;
+    border-radius: 2px;
+    transition: 0.3s;
+}
+
+.container { 
+    width: 95%;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.status-tabs { 
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.status-tab { 
+    padding: 8px 16px;
+    background: #ecf0f1;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.status-tab.active { 
+    background: #3498db;
+    color: white;
+}
+
+.status-tab:hover {
+    opacity: 0.8;
+}
+
+.orders-list { 
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+.order-header { 
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+    gap: 15px;
+    padding: 15px 20px;
+    background: #34495e;
+    color: white;
+    font-weight: bold;
+}
+
+.order-item { 
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto;
+    gap: 15px;
+    align-items: center;
+}
+
+.status { 
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.status.pending { background: #fff3cd; color: #856404; }
+.status.accepted { background: #d1ecf1; color: #0c5460; }
+.status.rejected { background: #f8d7da; color: #721c24; }
+.status.completed { background: #d4edda; color: #155724; }
+.status.delivery { background: #cce7ff; color: #004085; }
+
+.action-btn { 
+    padding: 6px 12px;
+    border-radius: 5px;
+    background: #3498db;
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    display: inline-block;
+    margin-top: 5px;
+    text-align: center;
+}
+
+.action-btn:hover {
+    background: #2980b9;
+}
+
+/* ----- Responsive Styles ----- */
+
+/* Medium Screens */
+@media (max-width: 992px) {
+    .order-header,
+    .order-item {
+        grid-template-columns: 2fr 1fr 1fr auto;
+    }
+
+    .order-header div:nth-child(5),
+    .order-header div:nth-child(6),
+    .order-item div:nth-child(5),
+    .order-item div:nth-child(6) {
+        display: none;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar .hamburger {
+        display: flex;
+    }
+
+    .navbar .menu {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background: #1e3d59;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        padding: 10px 0;
+        z-index: 999;
+    }
+
+    .navbar .menu.show {
+        display: flex;
+    }
+
+    .navbar .menu a {
+        text-align: center;
+        padding: 10px 0;
+        width: 100%;
+        margin: 0;
+    }
+
+    .orders-list {
+        font-size: 14px;
+    }
+}
+
+/* Extra Small Devices */
+@media (max-width: 576px) {
+    .container {
+        width: 100%;
+        padding: 10px;
+    }
+
+    .status-tabs {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .order-item {
+        grid-template-columns: 1fr auto;
+        row-gap: 10px;
+    }
+
+    .order-header {
+        display: none;
+    }
+
+    .status {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+
+    .action-btn {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+}

@@ -1,205 +1,335 @@
 <?php
 session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+date_default_timezone_set('Asia/Colombo');
+
 require __DIR__ . '/../mongodb_config.php';
 
-// Only transporters can access
+$ordersCollection = $db->orders;
+$usersCollection  = $db->users;
+$timeslotCollection = $db->timeslot; // <-- NEW COLLECTION
+
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'transporter') {
     header("Location: ../login.php");
     exit();
 }
 
-$username = $_SESSION['username'];
-$timeSlots = $db->time_slots;
-$vehicles = $db->vehicles;
-$orders = $db->orders;
+$transporter = $_SESSION['username'];
 
-$successMessage = '';
-$errorMessage = '';
-
-// ===== Find this driver's vehicle =====
-$vehicle = $vehicles->findOne(['username' => $username]);
-$vehicleId = $vehicle ? (string)$vehicle['_id'] : null;
-
-// ===== Handle actions =====
-if (isset($_GET['start'])) {
-    $slotId = $_GET['start'];
-    try {
-        $timeSlots->updateOne(
-            ['_id' => new MongoDB\BSON\ObjectId($slotId)],
-            ['$set' => ['status' => 'InProgress', 'started_at' => date('Y-m-d H:i:s')]]
-        );
-        $successMessage = "Delivery started.";
-    } catch (Exception $e) {
-        $errorMessage = "Error updating status: " . $e->getMessage();
-    }
+// ------------------------- FETCH TRANSPORTER PROFILE -------------------------
+$transporterProfile = $usersCollection->findOne(['username' => $transporter, 'role' => 'transporter']);
+if (!$transporterProfile) {
+    $transporterProfile = [
+        'username' => $transporter,
+        'name'     => $transporter,
+        'phone'    => 'N/A',
+        'location' => 'N/A',
+        'photo'    => 'default_profile.png'
+    ];
 }
+$displayName = htmlspecialchars($transporterProfile['name'] ?? $transporter);
+$displayImage = htmlspecialchars($transporterProfile['image'] ?? 'default.png');
 
-if (isset($_GET['deliver'])) {
-    $slotId = $_GET['deliver'];
-    try {
-        // update timeslot status
-        $timeSlots->updateOne(
-            ['_id' => new MongoDB\BSON\ObjectId($slotId)],
-            ['$set' => ['status' => 'Completed', 'delivered_at' => date('Y-m-d H:i:s')]]
-        );
+// ------------------------- HANDLE START/END TRANSPORT -------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-        // also mark related order as completed
-        $slot = $timeSlots->findOne(['_id' => new MongoDB\BSON\ObjectId($slotId)]);
-        if ($slot && isset($slot['order_id'])) {
-            $orders->updateOne(
-                ['_id' => $slot['order_id']],
-                ['$set' => ['status' => 'completed']]
+    $orderId = $_POST['order_id'] ?? null;
+
+    if ($orderId) {
+
+        $orderObjectId = new MongoDB\BSON\ObjectId($orderId);
+
+        // Fetch Order
+        $order = $ordersCollection->findOne(['_id' => $orderObjectId]);
+
+        // Fetch farmer & wholesaler information
+        $farmer = getUserInfo($usersCollection, $order['farmer'] ?? null, 'farmer');
+        $wholesaler = getUserInfo($usersCollection, $order['wholesaler'] ?? null, 'wholesaler');
+
+        // Common timeslot data
+        $timeslotData = [
+            'order_id'        => $orderObjectId,
+            'transporter'     => $transporter,
+            'farmer_name'     => $farmer['name'] ?? '-',
+            'farmer_location' => $farmer['location'] ?? '-',
+            'wholesaler_name' => $wholesaler['name'] ?? '-',
+            'quantity'        => $order['quantity'] ?? '-',
+            'pickup_time'     => $order['pickup_datetime'] ?? null,
+            'arrival_time'    => $order['market_arrival_datetime'] ?? null,
+            'map'             => "https://www.google.com/maps?q=" . urlencode($farmer['location'] ?? 'Sri Lanka'),
+        ];
+
+        // START TRANSPORT
+        if (isset($_POST['start_transport'])) {
+
+            $ordersCollection->updateOne(
+                ['_id' => $orderObjectId],
+                ['$set' => [
+                    'status' => 'in_transit',
+                    'transport_start_time' => new MongoDB\BSON\UTCDateTime()
+                ]]
             );
+
+            // Save to timeslot log
+            $timeslotCollection->insertOne(array_merge($timeslotData, [
+                'action' => 'start_transport',
+                'timestamp' => new MongoDB\BSON\UTCDateTime()
+            ]));
         }
 
-        $successMessage = "Delivery marked as completed.";
-    } catch (Exception $e) {
-        $errorMessage = "Error completing delivery: " . $e->getMessage();
+        // END TRANSPORT
+        if (isset($_POST['end_transport'])) {
+
+            $ordersCollection->updateOne(
+                ['_id' => $orderObjectId],
+                ['$set' => [
+                    'status' => 'delivered',
+                    'transport_end_time' => new MongoDB\BSON\UTCDateTime()
+                ]]
+            );
+
+            // Save to timeslot log
+            $timeslotCollection->insertOne(array_merge($timeslotData, [
+                'action' => 'end_transport',
+                'timestamp' => new MongoDB\BSON\UTCDateTime()
+            ]));
+        }
+
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit();
     }
 }
 
-// ===== Fetch assigned time slots =====
-$query = $vehicleId ? ['vehicle_id' => new MongoDB\BSON\ObjectId($vehicleId)] : [];
-$assignedSlots = iterator_to_array($timeSlots->find($query, ['sort' => ['schedule_time' => 1]]));
+// ------------------------- FETCH ORDERS -------------------------
+try {
+    $ordersCursor = $ordersCollection->find(
+        [
+            'transporter' => $transporter,
+            'status' => ['$in' => ['accepted','in_transit']],
+            'wholesaler' => ['$ne' => '']
+        ],
+        ['sort' => ['pickup_slot_date' => 1, 'pickup_slot_label' => 1]]
+    );
+    $orders = iterator_to_array($ordersCursor);
+} catch (Exception $e) {
+    $orders = [];
+}
 
-function safe($v) {
-    return htmlspecialchars(is_scalar($v) ? $v : json_encode($v));
+// ------------------------- STATS -------------------------
+$totalOrders = count($orders);
+$acceptedOrders = count(array_filter($orders, fn($o) => $o['status'] === 'accepted'));
+$inTransitOrders = count(array_filter($orders, fn($o) => $o['status'] === 'in_transit'));
+
+// ------------------------- HELPER FUNCTIONS -------------------------
+function format_datetime_sl($val){
+    if (!$val) return '-';
+    if ($val instanceof MongoDB\BSON\UTCDateTime){
+        $dt = $val->toDateTime();
+        $dt->setTimezone(new DateTimeZone('Asia/Colombo'));
+        return $dt->format('d M Y, h:i A');
+    }
+    if (is_string($val)){
+        $ts = strtotime($val);
+        return $ts ? date('d M Y, h:i A', $ts) : htmlspecialchars($val);
+    }
+    return '-';
+}
+
+function getUserInfo($usersCollection, $username, $role) {
+    if (!$username) return ['name' => 'Unknown', 'phone' => '-', 'distance' => '-', 'location'=>'-'];
+
+    $user = $usersCollection->findOne(['username'=>$username,'role'=>$role]);
+    if (!$user) return ['name'=>$username,'phone'=>'-','distance'=>'-','location'=>'-'];
+
+    return [
+        'name'     => $user['full_name'] ?? $user['name'] ?? $user['username'],
+        'phone'    => $user['phone'] ?? '-',
+        'distance' => $user['distance_to_market_km'] ?? '-',
+        'location' => $user['location'] ?? '-'
+    ];
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transporter Time Slots - DMAS</title>
-<style>
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #f7f9fb;
-  margin: 0;
-  color: #333;
-}
-.navbar {
-  background: linear-gradient(135deg, #243b55, #141e30);
-  color: #fff;
-  padding: 14px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.navbar a {
-  color: #fff;
-  text-decoration: none;
-  margin-left: 15px;
-  font-weight: 500;
-}
-.container {
-  width: 95%;
-  max-width: 1100px;
-  margin: 25px auto;
-  background: #fff;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-}
-h1 { color: #243b55; }
-.success { background:#eafaf1; color:#155724; padding:10px; border-left:4px solid #28a745; margin-bottom:10px; }
-.error { background:#fdecea; color:#721c24; padding:10px; border-left:4px solid #dc3545; margin-bottom:10px; }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-th, td {
-  padding: 12px 10px;
-  border: 1px solid #ddd;
-  text-align: center;
-}
-th {
-  background-color: #f1f5f9;
-  color: #243b55;
-}
-.badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 18px;
-  font-size: 13px;
-  color: #fff;
-  font-weight: 600;
-}
-.badge.Scheduled { background:#007bff; }
-.badge.InProgress { background:#f39c12; }
-.badge.Completed { background:#28a745; }
-button {
-  padding: 6px 10px;
-  border: none;
-  border-radius: 5px;
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
-}
-.start { background: #3498db; }
-.deliver { background: #28a745; }
-.start:hover { background: #2980b9; }
-.deliver:hover { background: #218838; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transporter - Time Slots</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/time_slot.css">
 </head>
 <body>
-
-<div class="navbar">
-  <div><strong>🚚 DMAS Transporter Panel</strong></div>
-  <div>
-    <a href="transporter_time_slots.php">Time Slots</a>
-    <a href="../logout.php">Logout</a>
-  </div>
+<div class="sidebar">
+    <div class="profile-section">
+        <img src="../uploads/<?= $displayImage ?>" alt="Profile" class="profile-img" onerror="this.src='../uploads/default.png'; this.onerror=null;">
+        <h3><?= $displayName ?></h3>
+        <p><?= $transporter ?></p>
+        <p><i class="fas fa-truck"></i> Transporter</p>
+    </div>
+    
+    <div class="nav-links">
+        <a href="transporter_dashboard.php">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="transporter_time_slot.php" class="active">
+            <i class="fas fa-clock"></i>
+            <span>Time Slots</span>
+        </a>
+        <a href="vehicle_order_delivered.php">
+            <i class="fas fa-check-circle"></i>
+            <span>Delivered Orders</span>
+        </a>
+        <a href="profile.php">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+    
+    <a href="../logout.php" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+    </a>
 </div>
 
-<div class="container">
-  <h1>My Assigned Deliveries</h1>
+<div class="main">
+    <h1>🕒 Your Assigned Time Slots</h1>
+    
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+        <div class="stat-box">
+            <i class="fas fa-clipboard-list"></i>
+            <h3>Total Slots</h3>
+            <div class="count"><?= $totalOrders ?></div>
+        </div>
+        
+        <div class="stat-box">
+            <i class="fas fa-hourglass-half"></i>
+            <h3>Ready for Pickup</h3>
+            <div class="count"><?= $acceptedOrders ?></div>
+        </div>
+        
+        <div class="stat-box">
+            <i class="fas fa-truck-moving"></i>
+            <h3>In Transit</h3>
+            <div class="count"><?= $inTransitOrders ?></div>
+        </div>
+    </div>
 
-  <?php if ($successMessage): ?><div class="success"><?= $successMessage ?></div><?php endif; ?>
-  <?php if ($errorMessage): ?><div class="error"><?= $errorMessage ?></div><?php endif; ?>
+    <?php if(empty($orders)): ?>
+        <div class="empty-state">
+            <i class="fas fa-calendar-times"></i>
+            <h3>No Assigned Time Slots</h3>
+            <p>You don't have any assigned time slots yet. Time slots will appear here when farmers accept your availability.</p>
+            <p style="color: #ff9a3c; font-weight: 500;"><i class="fas fa-info-circle"></i> Make sure your profile is complete and you've set your availability.</p>
+        </div>
+    <?php else: ?>
+        <div class="slot-cards-container">
+            <?php foreach ($orders as $order):
+                $farmer_info = getUserInfo($usersCollection, $order['farmer'] ?? null, 'farmer');
+                $wholesaler_info = getUserInfo($usersCollection, $order['wholesaler'] ?? null, 'wholesaler');
 
-  <table>
-    <thead>
-      <tr>
-        <th>Order ID</th>
-        <th>Vehicle</th>
-        <th>Schedule</th>
-        <th>Pickup</th>
-        <th>Destination</th>
-        <th>Status</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php if (count($assignedSlots) === 0): ?>
-        <tr><td colspan="7">No time slots assigned yet.</td></tr>
-      <?php else: ?>
-        <?php foreach ($assignedSlots as $slot): ?>
-          <tr>
-            <td><?= safe(substr((string)$slot['order_id'], -6)) ?></td>
-            <td><?= safe($slot['vehicle_number'] ?? 'N/A') ?></td>
-            <td><?= safe($slot['schedule_time'] ?? '-') ?></td>
-            <td><?= safe($slot['pickup_location'] ?? '-') ?></td>
-            <td><?= safe($slot['destination'] ?? '-') ?></td>
-            <td><span class="badge <?= safe($slot['status'] ?? 'Scheduled') ?>"><?= safe($slot['status'] ?? 'Scheduled') ?></span></td>
-            <td>
-              <?php if (($slot['status'] ?? '') === 'Scheduled'): ?>
-                <a href="?start=<?= safe($slot['_id']) ?>"><button class="start">Start Delivery</button></a>
-              <?php elseif (($slot['status'] ?? '') === 'InProgress'): ?>
-                <a href="?deliver=<?= safe($slot['_id']) ?>"><button class="deliver">Mark Delivered</button></a>
-              <?php else: ?>
-                —
-              <?php endif; ?>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      <?php endif; ?>
-    </tbody>
-  </table>
+                $pickup_display = format_datetime_sl($order['pickup_datetime'] ?? null);
+                $market_display = format_datetime_sl($order['market_arrival_datetime'] ?? null);
+                $status = $order['status'] ?? 'accepted';
+            ?>
+            <div class="slot-card">
+                <div class="slot-header">
+                    <h3>
+                        <i class="fas fa-box"></i>
+                        <?= htmlspecialchars($order['product_name'] ?? 'Unknown Product') ?>
+                    </h3>
+                    <div class="slot-time">
+                        <i class="fas fa-clock"></i>
+                        <?= htmlspecialchars(($order['pickup_slot_label'] ?? 'Time') . ' - ' . ($order['pickup_slot_date'] ?? 'Date')) ?>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <span class="status-badge status-<?= $status ?>">
+                            <?= ucfirst(str_replace('_', ' ', $status)) ?>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="slot-content">
+                    <div class="info-row">
+                        <span class="info-label">Order ID:</span>
+                        <span class="info-value"><?= substr((string)($order['_id'] ?? ''), -8) ?></span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Quantity:</span>
+                        <span class="info-value"><?= htmlspecialchars($order['quantity'] ?? '-') ?> units</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Farmer:</span>
+                        <span class="info-value"><?= htmlspecialchars($farmer_info['name']) ?></span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Farmer Phone:</span>
+                        <span class="info-value"><?= htmlspecialchars($farmer_info['phone']) ?></span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Distance to Market:</span>
+                        <span class="info-value"><?= htmlspecialchars($farmer_info['distance']) ?> km</span>
+                    </div>
+                    
+                    <div class="map-container">
+                        <iframe 
+                            src="https://www.google.com/maps?q=<?= urlencode($farmer_info['location'] ?? 'Sri Lanka') ?>&output=embed&zoom=12"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Wholesaler:</span>
+                        <span class="info-value"><?= htmlspecialchars($wholesaler_info['name']) ?></span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Wholesaler Phone:</span>
+                        <span class="info-value"><?= htmlspecialchars($wholesaler_info['phone']) ?></span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Pickup Time:</span>
+                        <span class="info-value"><?= $pickup_display ?></span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">Market Arrival:</span>
+                        <span class="info-value"><?= $market_display ?></span>
+                    </div>
+                    
+                    <!-- Transport buttons -->
+                    <div class="transport-actions">
+                        <?php if($status === 'accepted' || $status === 'in_transit'): ?>
+                            <form method="POST" class="transport-form">
+                                <input type="hidden" name="order_id" value="<?= $order['_id'] ?>">
+                                <?php if($status === 'accepted'): ?>
+                                    <button type="submit" name="start_transport" class="btn start-btn">
+                                        <i class="fas fa-play-circle"></i> Start Transport
+                                    </button>
+                                <?php elseif($status === 'in_transit'): ?>
+                                    <button type="submit" name="end_transport" class="btn end-btn">
+                                        <i class="fas fa-flag-checkered"></i> End Transport
+                                    </button>
+                                <?php endif; ?>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 </div>
-
+ <script src="assets/time_slot.js"></script>
 </body>
 </html>
+

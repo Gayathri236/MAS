@@ -2,6 +2,10 @@
 session_start();
 require __DIR__ . '/../mongodb_config.php';
 
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'wholesaler') {
     header("Location: ../login.php");
     exit();
@@ -10,303 +14,138 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'wholesaler') {
 $wholesaler = $_SESSION['username'];
 $productsCollection = $db->products;
 $ordersCollection = $db->orders;
+$usersCollection = $db->users;
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $product_id = $_POST['product_id'];
-    $quantity = floatval($_POST['quantity']);
-
-    $product = $productsCollection->findOne(['_id' => new MongoDB\BSON\ObjectId($product_id)]);
-    if (!$product) {
-        die("Product not found");
-    }
-
-    if ($quantity > $product['quantity']) {
-        die("Not enough quantity available");
-    }
-
-    $order = [
-        'wholesaler' => $wholesaler,
-        'farmer' => $product['farmer'],
-        'product_id' => $product_id,
-        'product_name' => $product['name'],
-        'quantity' => $quantity,
-        'unit_price' => $product['price'],
-        'total_amount' => $product['price'] * $quantity,
-        'status' => 'pending',
-        'order_date' => new MongoDB\BSON\UTCDateTime(),
-        'delivery_address' => $_POST['delivery_address'] ?? '',
-        'notes' => $_POST['notes'] ?? ''
-    ];
-
-    $result = $ordersCollection->insertOne($order);
-
-    if ($result->getInsertedCount() > 0) {
-        $productsCollection->updateOne(
-            ['_id' => new MongoDB\BSON\ObjectId($product_id)],
-            ['$inc' => ['quantity' => -$quantity]]
-        );
-        header("Location: order_management.php?success=1");
-        exit();
-    } else {
-        $error = "Failed to place order";
-    }
-}
 
 $product_id = $_GET['id'] ?? '';
-if ($product_id) {
-    $product = $productsCollection->findOne(['_id' => new MongoDB\BSON\ObjectId($product_id)]);
-    if (!$product) {
-        die("Product not found");
+if (!$product_id) die("Product ID missing");
+$product = $productsCollection->findOne(['_id'=>new MongoDB\BSON\ObjectId($product_id)]);
+if (!$product) die("Product not found");
+
+
+$transporters = $usersCollection->find(['role'=>'transporter']);
+
+
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    $quantity = trim($_POST['quantity']); 
+    $transporter = $_POST['transporter'];
+    $needed_date_raw = $_POST['needed_date'];
+    $qtyNumber = floatval($quantity);
+
+    $needed_datetime_str = $needed_date_raw . ' ' . $needed_time_raw;
+    $needed_datetime = new MongoDB\BSON\UTCDateTime(strtotime($needed_datetime_str) * 1000);
+
+    if($qtyNumber > $product['quantity']){
+        $error = "Not enough quantity. Remaining: {$product['quantity']} {$product['unit']}";
+    } else {
+        $order = [
+            'wholesaler'=>$wholesaler,
+            'farmer'=>$product['farmer'],
+            'product_id'=>$product_id,
+            'product_name'=>$product['name'],
+            'quantity'=>$quantity,
+            'unit'=>$product['unit'],
+            'unit_price'=>$product['price'],
+            'total_amount'=>$product['price']*$qtyNumber,
+            'transporter'=>$transporter,
+            'needed_datetime'=>$needed_datetime,   // store wholesaler request
+            'status'=>'pending',
+            'order_date'=>new MongoDB\BSON\UTCDateTime()
+        ];
+
+        $res = $ordersCollection->insertOne($order);
+        if($res->getInsertedCount()>0){
+            header("Location: order_management.php?success=1");
+            exit();
+        } else { 
+            $error="Failed to place order"; 
+        }
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Place Order - DMAS</title>
-    <style>
-        /* ===== Global ===== */
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(120deg, #f4f9f9, #e8f0f2);
-            margin: 0;
-            color: #333;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="assets/place_order.css">
+<title>Place Order - DMAS</title>
 
-        /* ----- Navigation Bar ----- */
-        .navbar {
-        background: #1e3d59;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 40px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .navbar .nav-left h2 {
-        margin: 0;
-        font-size: 22px;
-        }
-
-        .navbar .nav-right a {
-        color: white;
-        margin-left: 20px;
-        text-decoration: none;
-        font-weight: 600;
-        transition: 0.3s;
-        padding: 6px 10px;
-        border-radius: 6px;
-        }
-
-        .navbar .nav-right a:hover {
-        background: #3b7ea1;
-        }
-
-        .navbar .nav-right a.active {
-        background: #2ecc71;
-        color: white;
-        }
-
-        .navbar .nav-right a.logout {
-        background: #e74c3c;
-        }
-
-        .navbar .nav-right a.active {
-         background: #2ecc71;
-         color: white;
-        }
-
-       .navbar .nav-right a.logout {
-        background: #e74c3c;
-        }
-
-       /* Make only profile button green */
-       .navbar .nav-right a.profile-active {
-        background: #2ecc71 !important;
-        color: white !important;
-}
-
-
-
-        /* ===== Container ===== */
-        .container {
-            margin: 120px auto 50px auto;
-            max-width: 600px;
-            background: #ffffff;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            animation: fadeIn 0.6s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h1 {
-            text-align: center;
-            color: #1e3d59;
-            margin-bottom: 25px;
-        }
-
-        .product-summary {
-            background: #f0f9ff;
-            border-left: 6px solid #2ecc71;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-        }
-
-        .product-summary h3 {
-            color: #1e3d59;
-            margin-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            font-weight: 600;
-            color: #555;
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        input, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 15px;
-            transition: 0.3s;
-        }
-
-        input:focus, textarea:focus {
-            border-color: #2ecc71;
-            outline: none;
-            box-shadow: 0 0 8px rgba(46,204,113,0.2);
-        }
-
-        button {
-            background: #2ecc71;
-            color: white;
-            border: none;
-            padding: 14px;
-            width: 100%;
-            font-size: 16px;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background: #27ae60;
-            transform: translateY(-2px);
-        }
-
-        .total {
-            background: #f4f8f7;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 700;
-            color: #1e3d59;
-            margin-top: 10px;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-        }
-
-        @media screen and (max-width: 600px) {
-            .container { padding: 25px; }
-        }
-    </style>
 </head>
 <body>
-   <nav class="navbar">
-  <div>🌾 DMAS - Wholesaler Portal</div>
-  <div class="nav-right">
-    <a href="dashboard.php">🏠 Dashboard</a>
-    <a href="product_marketplace.php">🛒 Marketplace</a>
-    <a href="order_management.php">📦 Orders</a>
-    <a href="place_order.php">📝 Place Orders</a>
-    <a href="profile.php" class="profile-active">👤 My Profile</a>
-    <a href="../logout.php" class="logout">🚪 Logout</a>
-  </div>
-</nav>
-
-
-    <!-- ===== Main Container ===== -->
-    <div class="container">
-        <h1>🛍️ Place Your Order</h1>
-
-        <?php if(isset($error)): ?>
-            <div class="error"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
-
-        <?php if(isset($product)): ?>
-            <div class="product-summary">
-                <h3><?= htmlspecialchars($product['name']) ?></h3>
-                <p><strong>Price:</strong> LKR <?= number_format($product['price'], 2) ?> / <?= htmlspecialchars($product['unit']) ?></p>
-                <p><strong>Available:</strong> <?= number_format($product['quantity'], 2) ?> <?= htmlspecialchars($product['unit']) ?></p>
-                <p><strong>Farmer:</strong> <?= htmlspecialchars($product['farmer']) ?></p>
+    <nav class="navbar">
+            <div class="brand">🌾 DMAS - Wholesaler Portal</div>
+            <div class="menu" id="menu">
+                <a href="dashboard.php">🏠 Dashboard</a>
+                <a href="product_marketplace.php">🛒 Marketplace</a>
+                <a href="order_management.php"class="active">📦 Orders</a>
+                <a href="prediction copy.php">📈 Price Prediction</a>
+                <a href="view_workers.php">👨‍🔧 View Workers</a>
+                <a href="profile.php">👤 My Profile</a>
+                <a href="../logout.php" class="logout" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
             </div>
-        <?php endif; ?>
-
-        <form method="POST" class="order-form">
-            <?php if(isset($product)): ?>
-                <input type="hidden" name="product_id" value="<?= $product['_id'] ?>">
-            <?php endif; ?>
-
-            <div class="form-group">
-                <label>Quantity (<?= htmlspecialchars($product['unit'] ?? 'units') ?>):</label>
-                <input type="number" name="quantity" min="0.1" step="0.1"
-                       max="<?= $product['quantity'] ?? '' ?>" value="<?= $_POST['quantity'] ?? '1' ?>" required>
+            <div class="hamburger" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
+     </nav>
 
-            <div class="form-group">
-                <label>Delivery Address:</label>
-                <textarea name="delivery_address" rows="3" placeholder="Enter delivery location..." required><?= $_POST['delivery_address'] ?? '' ?></textarea>
-            </div>
+<div class="container">
+<h2>🛍️ Place Your Order</h2>
+<?php if(isset($error)) echo "<div class='error'>".htmlspecialchars($error)."</div>"; ?>
 
-            <div class="form-group">
-                <label>Special Instructions (Optional):</label>
-                <textarea name="notes" rows="3" placeholder="E.g. Deliver between 9am - 11am"><?= $_POST['notes'] ?? '' ?></textarea>
-            </div>
+<div class="product-summary">
+    <h3><?= htmlspecialchars($product['name']) ?></h3>
+    <p>1<?= htmlspecialchars($product['unit']) ?> Price: LKR <?= number_format($product['price'],2) ?></p>
+    <p>Available: <?= $product['quantity'] ?> <?= htmlspecialchars($product['unit']) ?></p>
+    <p>Farmer: <?= htmlspecialchars($product['farmer']) ?></p>
+</div>
 
-            <div class="total">
-                💰 Total Amount: LKR <span id="totalAmount">0.00</span>
-            </div>
+<form method="POST">
+    <label>Quantity:</label>
+    <input type="text" name="quantity" placeholder="Enter quantity (e.g., 2kg)" required>
 
-            <button type="submit">✅ Confirm Order</button>
-        </form>
-    </div>
+    <label>Order Needed Date:</label>
+    <input type="date" name="needed_date" required>
 
-    <script>
-        const unitPrice = <?= $product['price'] ?? 0 ?>;
-        const quantityInput = document.querySelector('input[name="quantity"]');
+    <label>Select Transporter:</label>
+    <select name="transporter" required>
+    <option value="">-- Select Transporter --</option>
+    <?php foreach($transporters as $t): ?>
+        <option value="<?= htmlspecialchars($t['username']) ?>">
+            <?= htmlspecialchars($t['name']) ?> (<?= htmlspecialchars($t['phone'] ?? '-') ?>)
+        </option>
+    <?php endforeach; ?>
+    </select>
+
+
+    <div class="total">Total: LKR <span id="totalAmount"><?= number_format($product['price'],2) ?></span></div>
+    <button type="submit">Confirm Order</button>
+</form>
+</div>
+
+<script>
+        const unitPrice = <?= $product['price'] ?>;
+        const qtyInput = document.querySelector('input[name="quantity"]');
         const totalAmount = document.getElementById('totalAmount');
 
-        function updateTotal() {
-            const q = parseFloat(quantityInput.value) || 0;
-            totalAmount.textContent = (unitPrice * q).toFixed(2);
+        function updateTotal(){
+            let val = qtyInput.value.trim().toLowerCase();
+            let qty = 0;
+            if(val.endsWith("kg")) qty = parseFloat(val.replace("kg","")) || 0;
+            else if(val.endsWith("g")) qty = (parseFloat(val.replace("g","")) || 0) / 1000;
+            else qty = parseFloat(val) || 0;
+            totalAmount.textContent = (qty * unitPrice).toFixed(2);
+        }
+        qtyInput.addEventListener('input', updateTotal);
+        updateTotal();
+
+        function toggleMenu() {
+        const menu = document.querySelector('.navbar .menu');
+        menu.classList.toggle('show');
         }
 
-        quantityInput.addEventListener('input', updateTotal);
-        updateTotal();
-    </script>
+</script>
 </body>
 </html>

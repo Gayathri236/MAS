@@ -25,9 +25,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     exit();
 }
 
-// ==========================
-// Filters
-// ==========================
+
 $search = $_GET['search'] ?? '';
 $type = $_GET['type'] ?? '';
 $status = $_GET['status'] ?? '';
@@ -69,8 +67,8 @@ $users = $usersCollection->find($filter, ['sort' => ['_id' => -1]]);
   <div class="nav-right">
     <a href="admin_dashboard.php">🏠 Dashboard</a>
     <a href="user_management.php"class="active">👥 Manage Users</a>
-    <a href="order_management.php">📦  Manage Orders</a>
-    <a href="time_slot_management.php">🚚 Time Slot</a>
+    <a href="order_management.php">📦  View Orders</a>
+    <a href="admin_report.php">📄 Report</a>
     <a href="worker_registration.php">📝 Worker Registration</a>
     <a href="../logout.php" class="logout">🚪 Logout</a>
   </div>

@@ -3,12 +3,16 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require __DIR__ . '/../mongodb_config.php'; // adjust path if in Wholesaler folder
+require __DIR__ . '/../mongodb_config.php';
+
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 
 // MongoDB collection
 $usercollection = $db->users;
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     die("Error: No user_id in session. Please log in again.");
 }
@@ -40,11 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $targetFile = $uploadDir . $fileName;
 
         if (move_uploaded_file($_FILES['image']['tmp_name'], $targetFile)) {
-            $updateData['image'] = 'uploads/' . $fileName; // Save relative path
+            $updateData['image'] = 'uploads/' . $fileName; 
         }
     }
 
-    // Update in MongoDB
     $usercollection->updateOne(
         ['_id' => $userId],
         ['$set' => $updateData]
@@ -59,23 +62,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <title>Wholesaler Profile | DMAS</title>
-  <link rel="stylesheet" href="profile.css">
+  <link rel="stylesheet" href="assets/profile.css">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="nav-left">
-      <h2>🌾 DMAS - Wholesaler Portal</h2>
-    </div>
-    <div class="nav-right">
-      <a href="dashboard.php">🏠 Dashboard</a>
-      <a href="product_marketplace.php">🛒 Marketplace</a>
-      <a href="order_management.php">📦 Orders</a>
-      <a href="place_order.php">📝 Place Orders</a>
-      <a href="profile.php" class="active">👤 My Profile</a>
-      <a href="../logout.php" class="logout">🚪 Logout</a>
-    </div>
-  </nav>
-
+     <nav class="navbar">
+            <div class="brand">🌾 DMAS - Wholesaler Portal</div>
+            <div class="hamburger" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="menu" id="menu">
+                <a href="dashboard.php">🏠 Dashboard</a>
+                <a href="product_marketplace.php">🛒 Marketplace</a>
+                <a href="order_management.php">📦 Orders</a>
+                <a href="prediction copy.php">📈 Price Prediction</a>
+                <a href="view_workers.php">👨‍🔧 View Workers</a>
+                <a href="profile.php"class="active">👤 My Profile</a>
+                <a href="../logout.php" class="logout" onclick="return confirm('Are you sure you want to logout?');">🚪 Logout</a>
+            </div>
+     </nav>
   <div class="container">
     <h1>My Profile</h1>
 
@@ -109,5 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
     </div>
   </div>
+    <script>
+        function toggleMenu() {
+            document.getElementById('menu').classList.toggle('show');
+        }
+    </script>
 </body>
 </html>

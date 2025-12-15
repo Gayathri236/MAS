@@ -1,0 +1,177 @@
+
+body { 
+    font-family: Arial, sans-serif; 
+    margin:0; 
+    padding:0; 
+    background:#f4f6f8; 
+}
+
+h1 { 
+    text-align:center; 
+    margin:20px 0; 
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1e3d59;
+    color: white;
+    padding: 15px 30px;
+    position: relative;
+    flex-wrap: wrap;
+}
+
+.navbar .brand {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.navbar .menu {
+    display: flex;
+    gap: 15px;
+}
+
+.navbar .menu a {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: 0.3s;
+    text-decoration: none;
+}
+
+.navbar .menu a:hover {
+    background: #3a5a80;
+}
+
+.navbar .menu a.active {
+    background: #2ecc71;
+}
+
+.navbar .menu a.logout {
+    background: #e74c3c;
+}
+
+/* Hamburger for small screens */
+.navbar .hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.navbar .hamburger span {
+    height: 3px;
+    width: 25px;
+    background: white;
+    margin: 4px 0;
+    border-radius: 2px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+table { 
+    width:100%; 
+    border-collapse: collapse; 
+    margin-top:20px;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+table, th, td { 
+    border:1px solid #ccc; 
+}
+
+th, td { 
+    padding:12px; 
+    text-align:left; 
+    font-size: 15px;
+}
+
+th { 
+    background:#0c801f; 
+    color:white; 
+}
+
+/* Status colors */
+.status.active { 
+    color: green; 
+    font-weight:bold;
+}
+.status.inactive { 
+    color: red; 
+    font-weight:bold; 
+}
+
+/* Tablets & small laptops */
+@media (max-width: 992px) {
+    th, td {
+        font-size: 14px;
+        padding: 10px;
+    }
+}
+
+/* Mobile Screens */
+@media (max-width: 768px) {
+
+    /* Navbar Responsive */
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 20px;
+    }
+
+    .navbar .hamburger {
+        display: flex;
+        margin-top: 8px;
+    }
+
+    .navbar .menu {  
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background: #1e3d59;
+        position: absolute;
+        top: 70px;
+        left: 0;
+        z-index: 999;
+        padding: 12px 0;
+    }
+
+    .navbar .menu.show {
+        display: flex;
+    }
+
+    .navbar .menu a {
+        text-align: center;
+        padding: 12px 0;
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Table Scroll */
+    .container {
+        overflow-x: auto;
+    }
+
+    table {
+        min-width: 750px; 
+    }
+}
+
+/* Extra Small Phones */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 20px;
+    }
+
+    th, td {
+        font-size: 13px;
+        padding: 8px;
+    }
+}

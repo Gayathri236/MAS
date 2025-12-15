@@ -1,26 +1,7 @@
 <?php
-/*
-// mongodb_config.php
 
-require __DIR__ . '/vendor/autoload.php';  // Load Composer autoloader
-
-use MongoDB\Client;  // Import MongoDB Client
-
-try {
-    $mongoClient = new Client("mongodb://localhost:27017");  // Connect to MongoDB
-    $database = $mongoClient->Market;   // Database
-    $collection = $database->users;     // Users collection (use $collection for consistency)
-} catch (Exception $e) {
-    die("MongoDB connection failed: " . $e->getMessage());
-}
-    */
-
-
-
-// mongodb_config.php
-
-require __DIR__ . '/vendor/autoload.php';  // Load Composer autoloader
-use MongoDB\Client;  // Import MongoDB Client
+require __DIR__ . '/vendor/autoload.php';  
+use MongoDB\Client; 
 
 try {
     // Connect to MongoDB
@@ -30,12 +11,12 @@ try {
     $db = $client->Market;
 
     // Collections
-    $usersCollection = $db->users;         // For users
-    $productsCollection = $db->products;   // For products
+    $usersCollection = $db->users;         
+    $productsCollection = $db->products;   
     $ordersCollection = $db->orders;
     $workersCollection = $db->workers;
     $vehiclesCollection = $db->vehicles;
-    $timeSlotsCollection = $db->time_slots; 
+    $timeSlotsCollection = $db->timeslot; 
 } catch (Exception $e) {
     die("MongoDB connection failed: " . $e->getMessage());
 }

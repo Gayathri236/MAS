@@ -1,0 +1,243 @@
+/* ----- Global Styles ----- */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f7f9;
+    margin: 0;
+    color: #333;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between; /* brand left, menu right */
+    align-items: center;
+    background: #1e3d59;
+    color: white;
+    padding: 12px 20px;
+    flex-wrap: wrap;
+}
+
+.navbar .brand {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.navbar .menu {
+    display: flex;
+    gap: 15px;
+}
+
+.navbar .menu a {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.navbar .menu a:hover {
+    background: #3a5a80;
+}
+
+.navbar .menu a.active {
+    background: #2ecc71;
+}
+
+.navbar .menu a.logout {
+    background: #e74c3c;
+}
+
+.navbar .hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    margin-left: auto; 
+}
+
+.navbar .hamburger span {
+    height: 3px;
+    width: 25px;
+    background: white;
+    margin: 4px 0;
+    border-radius: 2px;
+    transition: 0.3s;
+}
+
+/* ----- Container ----- */
+.container {
+    width: 95%;
+    max-width: 1200px;
+    margin: 20px auto;
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.filter-form input,
+.filter-form select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.filter-form button {
+    padding: 8px 16px;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.filter-form button:hover {
+    background: #219150;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.card-body {
+    padding: 15px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card-body h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+.card-body p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.card-body .actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.card-body .actions a {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.card-body .view {
+    background: #3498db;
+}
+
+.card-body .view:hover {
+    background: #2980b9;
+}
+
+.card-body .order {
+    background: #27ae60;
+}
+
+.card-body .order:hover {
+    background: #219150;
+}
+
+/* ----- Responsive Styles ----- */
+
+/* Small Tablets and below */
+@media (max-width: 992px) {
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .filter-form {
+        flex-direction: column;
+        align-items: center;
+    }
+
+}
+ @media(max-width:900px){
+    .navbar .menu {
+        display: none;
+        flex-direction: column;
+        width: 200px; /* or your preferred width */
+        position: absolute;
+        top: 60px; /* below navbar */
+        right: 0;  /* open from right side */
+        background: #1e3d59;
+        padding: 10px;
+        border-radius: 0 0 0 10px;
+    }
+    .navbar .menu a {
+        padding: 10px;
+        text-align: left;
+    }
+    .navbar .hamburger {
+        display: flex;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        width: 100%;
+        padding: 10px;
+    }
+
+    .card-body h3 {
+        font-size: 16px;
+    }
+
+    .card-body p {
+        font-size: 13px;
+    }
+
+    .filter-form input,
+    .filter-form select,
+    .filter-form button {
+        width: 100%;
+        max-width: 300px;
+    }
+}

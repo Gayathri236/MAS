@@ -1,0 +1,190 @@
+body{
+    font-family:'Segoe UI',sans-serif;
+    background:#f4f7f9;
+    margin:0;
+    color:#333;}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #1e3d59;
+    color: white;
+    padding: 12px 20px;
+    flex-wrap: wrap;
+}
+
+.navbar .brand {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.navbar .menu {
+    display: flex;
+    gap: 15px;
+}
+
+.navbar .menu.show {
+    display: flex;
+}
+
+
+.navbar .menu a {
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: 0.3s;
+    text-decoration: none;
+}
+
+.navbar .menu a:hover {
+    background: #3a5a80;
+}
+
+.navbar .menu a.active {
+    background: #2ecc71;
+}
+
+.navbar .menu a.logout {
+    background: #e74c3c;
+}
+
+.navbar .hamburger {
+    display: none;
+    flex-direction: column;
+    cursor: pointer;
+    margin-left: auto; 
+}
+
+@media(max-width:900px){
+    .navbar .hamburger {
+        display: flex;
+    }
+}
+
+
+.navbar .hamburger span {
+    height: 3px;
+    width: 25px;
+    background: white;
+    margin: 4px 0;
+    border-radius: 2px;
+    transition: 0.3s;
+}
+
+.container{
+    width:95%;
+    max-width:700px;
+    margin:30px auto;
+    padding:0 10px;
+}
+h2{
+    text-align:center;
+    color:#2c3e50;
+    margin-bottom:20px;
+}
+.product-summary{
+    background:#f0f9ff;
+    padding:20px;
+    border-left:5px solid #10b981;
+    border-radius:8px;
+    margin-bottom:25px;
+}
+.product-summary h3{
+    margin-top:0;
+    color:#1e3d59;
+}
+form{
+    background:#fff;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.05);
+}
+input,select{
+    width:100%;
+    padding:12px;
+    border-radius:6px;
+    border:1px solid #ccc;
+    margin-bottom:15px;
+    font-size:15px;
+    box-sizing:border-box;
+}
+button{
+    width:100%;
+    padding:14px;
+    background:#10b981;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:0.3s;
+}
+button:hover{background:#059669;}
+
+.error{
+    color:#e74c3c;
+    margin-bottom:15px;
+    font-weight:600;
+    background:#fdecea;
+    padding:10px;
+    border-radius:6px;}
+.total{
+    padding:12px;
+    background:#eef7ee;
+    border-radius:6px;
+    font-weight:700;
+    margin-bottom:15px;
+    text-align:center;
+    font-size:16px;}
+/* ----- Responsive Styles ----- */
+
+/* Small Tablets and below */
+@media (max-width: 992px) {
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .filter-form {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar .hamburger {
+        display: flex;
+    }
+
+    .navbar .menu {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        background: #1e3d59;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        padding: 10px 0;
+        z-index: 999;
+    }
+
+    .navbar .menu.show {
+        display: flex;
+    }
+
+    .navbar .menu a {
+        text-align: center;
+        padding: 10px 0;
+        width: 100%;
+        margin: 0;
+    }
+}
+
