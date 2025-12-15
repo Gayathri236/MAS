@@ -35,16 +35,23 @@ $displayPhone    = htmlspecialchars($transporterProfile['phone'] ?? 'N/A');
 $displayAddress  = htmlspecialchars($transporterProfile['location'] ?? ($transporterProfile['location'] ?? 'N/A'));
 $displayImage = htmlspecialchars($transporterProfile['image'] ?? 'default.png');
 
-// ------------------------- FETCH ORDERS -------------------------
-$orders = iterator_to_array($ordersCollection->find(
-    ['transporter' => $username]
-));
+// ------------------------- FETCH ORDERS FOR STATS -------------------------
+// Get all orders assigned to this transporter
+$allOrdersCursor = $ordersCollection->find(['transporter' => $username]);
+$allOrders = iterator_to_array($allOrdersCursor);
+
+// Get orders that are in transit (this is the correct status name based on your time slot page)
+$inTransitOrdersCursor = $ordersCollection->find([
+    'transporter' => $username,
+    'status' => 'in_transit'
+]);
+$inTransitOrders = iterator_to_array($inTransitOrdersCursor);
 
 // ------------------------- STATS -------------------------
-$totalOrders = count($orders);
-$pending     = count(array_filter($orders, fn($o) => $o['status'] === 'accepted'));
-$delivered   = count(array_filter($orders, fn($o) => $o['status'] === 'delivered'));
-$inProgress  = count(array_filter($orders, fn($o) => $o['status'] === 'in_progress'));
+$totalOrders = count($allOrders);
+$pending     = count(array_filter($allOrders, fn($o) => $o['status'] === 'accepted'));
+$delivered   = count(array_filter($allOrders, fn($o) => $o['status'] === 'delivered'));
+$inTransit   = count($inTransitOrders); // Corrected from 'in_progress' to 'in_transit'
 ?>
 
 <!DOCTYPE html>
@@ -111,10 +118,10 @@ $inProgress  = count(array_filter($orders, fn($o) => $o['status'] === 'in_progre
                 <div class="stat-label">Pending Orders</div>
             </a>
             
-            <a href="#" class="stat-card">
+            <a href="transporter_time_slot.php?status=in_transit" class="stat-card">
                 <i class="fas fa-truck-moving"></i>
-                <div class="stat-number"><?= $inProgress ?></div>
-                <div class="stat-label">In Progress</div>
+                <div class="stat-number"><?= $inTransit ?></div>
+                <div class="stat-label">In Transit</div>
             </a>
             
             <a href="vehicle_order_delivered.php?status=delivered" class="stat-card">
